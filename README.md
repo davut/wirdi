@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="#download">Download</a> · <a href="#features">Features</a> · <a href="#building-from-source">Build</a>
+  <a href="#install">Install</a> · <a href="#features">Features</a> · <a href="#building-from-source">Build</a>
 </p>
 
 ---
@@ -22,13 +22,19 @@
 
 Wirdi is a macOS app that helps you maintain a daily Quran reading habit. It displays ayahs word-by-word in a **Dynamic Island-style overlay** at the top of your screen, tracks your reading progress, and reminds you when it's time for your next session. All processing happens on-device — no accounts, no cloud, no data leaves your Mac.
 
-## Download
+## Install
+
+### Homebrew
+
+```bash
+brew install davut/wirdi/wirdi
+```
+
+### Manual
 
 **[Download the latest .dmg from Releases](https://github.com/davut/wirdi/releases/latest)**
 
 > Requires **macOS 15 Sequoia** or later. Works on Apple Silicon and Intel.
-
-### First launch
 
 Since Wirdi is not notarized, macOS may block it on first open. Run this once in Terminal:
 
