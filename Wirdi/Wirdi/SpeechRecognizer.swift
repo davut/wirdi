@@ -90,15 +90,21 @@ class SpeechRecognizer {
         retryCount = 0
         error = nil
 
-        SFSpeechRecognizer.requestAuthorization { [weak self] status in
-            DispatchQueue.main.async {
-                switch status {
-                case .authorized:
-                    self?.beginRecognition()
-                default:
-                    self?.error = "Speech recognition not authorized"
+        let status = SFSpeechRecognizer.authorizationStatus()
+        if status == .authorized {
+            beginRecognition()
+        } else if status == .notDetermined {
+            SFSpeechRecognizer.requestAuthorization { [weak self] status in
+                DispatchQueue.main.async {
+                    if status == .authorized {
+                        self?.beginRecognition()
+                    } else {
+                        self?.error = "Speech recognition not authorized"
+                    }
                 }
             }
+        } else {
+            error = "Speech recognition not authorized"
         }
     }
 
