@@ -195,11 +195,7 @@ class QuranReminderService {
             onComplete: { [weak self] in
                 self?.onReadingComplete(segment: segment)
             },
-            onDismiss: { [weak self] charOffset in
-                guard let self, !self.readingCompleted, charOffset > 0 else { return }
-                let ayah = segment.ayahAt(charOffset: charOffset)
-                self.settings.quranCurrentAyah = ayah
-            }
+            onDismiss: { _ in }
         )
 
         let contentView = NSHostingView(rootView: readerView)
@@ -246,11 +242,7 @@ class QuranReminderService {
             onComplete: { [weak self] in
                 self?.onReadingComplete(segment: segment)
             },
-            onDismiss: { [weak self] charOffset in
-                guard let self, !self.readingCompleted, charOffset > 0 else { return }
-                let ayah = segment.ayahAt(charOffset: charOffset)
-                self.settings.quranCurrentAyah = ayah
-            }
+            onDismiss: { _ in }
         )
 
         let contentView = NSHostingView(rootView: floatingView)
