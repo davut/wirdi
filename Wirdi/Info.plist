@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>ATSApplicationFontsPath</key>
+	<string>.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Wirdi uses the microphone to track your Quran recitation word by word during reading sessions.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Wirdi uses speech recognition to follow along as you recite the Quran and highlight the current word.</string>
+</dict>
+</plist>

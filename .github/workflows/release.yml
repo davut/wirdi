@@ -1,0 +1,112 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get version from tag
+        id: version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "number=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Update app version in Xcode project
+        run: |
+          sed -i '' "s/MARKETING_VERSION = .*;/MARKETING_VERSION = ${{ steps.version.outputs.number }};/g" Wirdi/Wirdi.xcodeproj/project.pbxproj
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Wirdi/Wirdi.xcodeproj/project.pbxproj
+          git commit -m "Bump version to ${{ steps.version.outputs.number }}" || echo "No changes to commit"
+          git push origin HEAD:refs/heads/main || echo "Push skipped"
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+
+      - name: Build universal app
+        working-directory: Wirdi
+        run: |
+          chmod +x build.sh
+          ./build.sh
+
+      - name: Upload DMG to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Wirdi/build/release/Wirdi.dmg
+          name: Wirdi ${{ steps.version.outputs.tag }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          body: |
+            ## Installation
+
+            1. Download **Wirdi.dmg** below
+            2. Open the DMG and drag **Wirdi** to Applications
+            3. Since the app is not notarized, macOS may block it on first launch. Run the following command in Terminal to fix this:
+
+            ```
+            xattr -cr /Applications/Wirdi.app
+            ```
+
+            Then open Wirdi normally.
+
+      - name: Compute DMG SHA256
+        id: sha
+        run: echo "sha256=$(shasum -a 256 Wirdi/build/release/Wirdi.dmg | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Update Homebrew Cask tap
+        env:
+          TAP_REPO_TOKEN: ${{ secrets.TAP_REPO_TOKEN }}
+          VERSION: ${{ steps.version.outputs.tag }}
+          SHA256: ${{ steps.sha.outputs.sha256 }}
+        run: |
+          VERSION_NUM="${VERSION#v}"
+          git clone https://x-access-token:${TAP_REPO_TOKEN}@github.com/davut/homebrew-wirdi.git tap
+          mkdir -p tap/Casks
+          cat > tap/Casks/wirdi.rb << EOF
+          cask "wirdi" do
+            version "${VERSION_NUM}"
+            sha256 "${SHA256}"
+
+            url "https://github.com/davut/wirdi/releases/download/${VERSION}/Wirdi.dmg"
+            name "Wirdi"
+            desc "Quran reading companion with word-by-word tracking in a Dynamic Island overlay"
+            homepage "https://github.com/davut/wirdi"
+
+            depends_on macos: ">= :sequoia"
+
+            app "Wirdi.app"
+
+            postflight do
+              system_command "/usr/bin/xattr", args: ["-cr", "#{appdir}/Wirdi.app"]
+            end
+
+            zap trash: [
+              "~/Library/Preferences/co.owlapps.wirdi.plist",
+              "~/Library/Saved Application State/co.owlapps.wirdi.savedState",
+            ]
+          end
+          EOF
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Update Wirdi to ${VERSION}"
+          git push
