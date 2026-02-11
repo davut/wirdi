@@ -30,6 +30,8 @@ class SpeechRecognizer {
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
     private var audioEngine = AVAudioEngine()
+    private var needsNewAudioEngine = false
+    private static var microphoneAccessGranted = false
     private var sourceText: String = ""
     private var sourceWords: [String] = []
     private var sourceWordOffsets: [Int] = []
@@ -90,22 +92,7 @@ class SpeechRecognizer {
         retryCount = 0
         error = nil
 
-        let status = SFSpeechRecognizer.authorizationStatus()
-        if status == .authorized {
-            beginRecognition()
-        } else if status == .notDetermined {
-            SFSpeechRecognizer.requestAuthorization { [weak self] status in
-                DispatchQueue.main.async {
-                    if status == .authorized {
-                        self?.beginRecognition()
-                    } else {
-                        self?.error = "Speech recognition not authorized"
-                    }
-                }
-            }
-        } else {
-            error = "Speech recognition not authorized"
-        }
+        requestPermissionsThenBegin()
     }
 
     func stop() {
@@ -177,6 +164,47 @@ class SpeechRecognizer {
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
 
+    /// Request microphone + speech recognition permissions once, then begin.
+    private func requestPermissionsThenBegin() {
+        // Step 1: Ensure speech recognition is authorized
+        let speechStatus = SFSpeechRecognizer.authorizationStatus()
+        if speechStatus == .notDetermined {
+            SFSpeechRecognizer.requestAuthorization { [weak self] status in
+                DispatchQueue.main.async {
+                    if status == .authorized {
+                        self?.requestMicrophoneThenBegin()
+                    } else {
+                        self?.error = "Speech recognition not authorized"
+                    }
+                }
+            }
+            return
+        }
+        guard speechStatus == .authorized else {
+            error = "Speech recognition not authorized"
+            return
+        }
+        requestMicrophoneThenBegin()
+    }
+
+    /// Request microphone permission once (cached), then begin recognition.
+    private func requestMicrophoneThenBegin() {
+        if SpeechRecognizer.microphoneAccessGranted {
+            beginRecognition()
+            return
+        }
+        AVCaptureDevice.requestAccess(for: .audio) { [weak self] granted in
+            DispatchQueue.main.async {
+                SpeechRecognizer.microphoneAccessGranted = granted
+                if granted {
+                    self?.beginRecognition()
+                } else {
+                    self?.error = "Microphone access not authorized"
+                }
+            }
+        }
+    }
+
     private func beginRecognition() {
         // Ensure clean state
         cleanupRecognition()
@@ -185,10 +213,12 @@ class SpeechRecognizer {
         audioBufferCount = 0
         matchAttemptsWithoutAdvance = 0
 
-        // Create a fresh engine so it picks up the current hardware format.
-        // AVAudioEngine caches the device format internally and reset() alone
-        // does not reliably flush it after a mic switch.
-        audioEngine = AVAudioEngine()
+        // Only create a fresh engine when needed (e.g. after a mic switch).
+        // Reusing the engine avoids repeated system microphone permission prompts.
+        if needsNewAudioEngine {
+            audioEngine = AVAudioEngine()
+            needsNewAudioEngine = false
+        }
 
         speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "ar"))
         guard let speechRecognizer, speechRecognizer.isAvailable else {
@@ -312,6 +342,8 @@ class SpeechRecognizer {
         // Reset retries so the fresh engine gets a full set of attempts
         retryCount = 0
         isListening = true
+        // Flag that we need a fresh engine after a device change
+        needsNewAudioEngine = true
         // Longer delay to let the audio system fully settle after a device change
         cleanupRecognition()
         scheduleBeginRecognition(after: 0.5)
