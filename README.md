@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="#install">Install</a> · <a href="#features">Features</a> · <a href="#building-from-source">Build</a>
+  <a href="https://wirdi.owlapps.co">Website</a> · <a href="#install">Install</a> · <a href="#features">Features</a> · <a href="#building-from-source">Build</a>
 </p>
 
 ---
