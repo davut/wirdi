@@ -65,6 +65,12 @@ find "$ARM_APP" -type f | while read -r arm_file; do
   fi
 done
 
+echo "🔏 Ad-hoc signing with entitlements…"
+codesign --force --deep --sign "-" \
+  --entitlements "$PROJECT_DIR/Wirdi/Wirdi.entitlements" \
+  --options runtime \
+  "$OUTPUT_APP"
+
 echo "📦 Creating DMG…"
 rm -f "$DMG_PATH"
 
