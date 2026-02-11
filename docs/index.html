@@ -1,0 +1,1503 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wirdi — Your Daily Quran Companion for Mac</title>
+<meta name="description" content="A macOS Quran reading companion with word-by-word tracking in a Dynamic Island-style overlay. Private, beautiful, and free.">
+<meta name="keywords" content="Quran, macOS, Quran reader, word-by-word, Dynamic Island, Muslim, Islamic, Arabic, Quran app, Mac app, privacy, open source">
+<meta name="author" content="Davut Jepbarov">
+<meta name="theme-color" content="#1C1C1E">
+<link rel="canonical" href="https://wirdi.owlapps.co/">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://wirdi.owlapps.co/">
+<meta property="og:title" content="Wirdi — Your Daily Quran Companion for Mac">
+<meta property="og:description" content="Word-by-word Quran reading in a beautiful Dynamic Island-style overlay. Private, on-device, and free.">
+<meta property="og:image" content="https://wirdi.owlapps.co/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:site_name" content="Wirdi">
+<meta property="og:locale" content="en_US">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Wirdi — Your Daily Quran Companion for Mac">
+<meta name="twitter:description" content="Word-by-word Quran reading in a beautiful Dynamic Island-style overlay. Private, on-device, and free.">
+<meta name="twitter:image" content="https://wirdi.owlapps.co/og-image.png">
+<meta name="twitter:image:alt" content="Wirdi app — Quran reading overlay on macOS">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --cream: #F5F0E8;
+  --cream-light: #FAF7F2;
+  --cream-dark: #E8E0D4;
+  --dark: #1C1C1E;
+  --dark-soft: #2C2C2E;
+  --gold: #C4A265;
+  --gold-light: #D4B87A;
+  --gold-dim: rgba(196, 162, 101, 0.15);
+  --gold-glow: rgba(196, 162, 101, 0.3);
+  --text-muted: #7A7470;
+  --text-body: #4A4440;
+  --radius: 16px;
+  --radius-lg: 24px;
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+  --font-arabic: 'Amiri', serif;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--cream);
+  color: var(--dark);
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+
+/* ── Selection ── */
+::selection {
+  background: var(--gold-dim);
+  color: var(--dark);
+}
+
+/* ── Utility ── */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+.section-label {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(32px, 5vw, 48px);
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--dark);
+  margin-bottom: 20px;
+}
+
+.section-desc {
+  font-size: 16px;
+  color: var(--text-muted);
+  max-width: 560px;
+  line-height: 1.7;
+}
+
+/* ── Reveal Animations ── */
+.reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.reveal-delay-1 { transition-delay: 0.1s; }
+.reveal-delay-2 { transition-delay: 0.2s; }
+.reveal-delay-3 { transition-delay: 0.3s; }
+.reveal-delay-4 { transition-delay: 0.4s; }
+.reveal-delay-5 { transition-delay: 0.5s; }
+
+/* ══════════════════════════════════════
+   GEOMETRIC BACKGROUND ORNAMENT
+   ══════════════════════════════════════ */
+.geo-ornament {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.03;
+}
+.geo-ornament svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* ══════════════════════════════════════
+   NAVIGATION
+   ══════════════════════════════════════ */
+nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  padding: 20px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.4s ease;
+}
+nav.scrolled {
+  background: rgba(245, 240, 232, 0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  padding: 14px 32px;
+  border-bottom: 1px solid rgba(196, 162, 101, 0.1);
+}
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--dark);
+}
+.nav-brand img {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+.nav-brand span {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 500;
+}
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  list-style: none;
+}
+.nav-links a {
+  font-size: 14px;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.3s;
+  font-weight: 400;
+}
+.nav-links a:hover {
+  color: var(--dark);
+}
+.nav-cta {
+  font-size: 13px !important;
+  color: var(--cream) !important;
+  background: var(--dark);
+  padding: 8px 20px;
+  border-radius: 100px;
+  transition: background 0.3s, transform 0.2s !important;
+}
+.nav-cta:hover {
+  background: var(--dark-soft) !important;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+  .nav-links { display: none; }
+}
+
+/* ══════════════════════════════════════
+   HERO
+   ══════════════════════════════════════ */
+.hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 140px 32px 100px;
+  overflow: hidden;
+}
+
+/* Radial gold glow */
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 800px;
+  background: radial-gradient(circle, var(--gold-dim) 0%, transparent 70%);
+  pointer-events: none;
+  animation: pulse-glow 6s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.5; transform: translateX(-50%) scale(1); }
+  50% { opacity: 0.8; transform: translateX(-50%) scale(1.1); }
+}
+
+/* Floating geometric shapes */
+.hero-shapes {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.hero-shape {
+  position: absolute;
+  border: 1px solid var(--gold);
+  opacity: 0.08;
+  animation: float-shape 20s ease-in-out infinite;
+}
+.hero-shape:nth-child(1) {
+  width: 300px; height: 300px;
+  top: 10%; left: 5%;
+  transform: rotate(45deg);
+  animation-delay: 0s;
+}
+.hero-shape:nth-child(2) {
+  width: 200px; height: 200px;
+  top: 60%; right: 10%;
+  border-radius: 50%;
+  animation-delay: -5s;
+  animation-duration: 25s;
+}
+.hero-shape:nth-child(3) {
+  width: 150px; height: 150px;
+  bottom: 20%; left: 15%;
+  transform: rotate(30deg);
+  animation-delay: -10s;
+  animation-duration: 22s;
+}
+.hero-shape:nth-child(4) {
+  width: 80px; height: 80px;
+  top: 25%; right: 20%;
+  transform: rotate(60deg);
+  animation-delay: -3s;
+  animation-duration: 18s;
+}
+
+@keyframes float-shape {
+  0%, 100% { transform: rotate(45deg) translate(0, 0); }
+  25% { transform: rotate(50deg) translate(20px, -15px); }
+  50% { transform: rotate(43deg) translate(-10px, 20px); }
+  75% { transform: rotate(48deg) translate(15px, 10px); }
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 780px;
+}
+
+.hero-arabic {
+  font-family: var(--font-arabic);
+  font-size: clamp(28px, 5vw, 42px);
+  color: var(--gold);
+  margin-bottom: 12px;
+  opacity: 0;
+  animation: fade-up 1s 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  line-height: 1.4;
+}
+
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(64px, 12vw, 120px);
+  font-weight: 300;
+  letter-spacing: -2px;
+  line-height: 0.95;
+  margin-bottom: 24px;
+  opacity: 0;
+  animation: fade-up 1s 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.hero-tagline {
+  font-size: clamp(17px, 2.5vw, 21px);
+  color: var(--text-muted);
+  font-weight: 300;
+  margin-bottom: 48px;
+  opacity: 0;
+  animation: fade-up 1s 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  line-height: 1.5;
+}
+
+.hero-buttons {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+  opacity: 0;
+  animation: fade-up 1s 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 36px;
+  background: var(--dark);
+  color: var(--cream);
+  border: none;
+  border-radius: 100px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 400;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.btn-primary:hover {
+  background: var(--dark-soft);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(28, 28, 30, 0.2);
+}
+.btn-primary svg { width: 18px; height: 18px; }
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 36px;
+  background: transparent;
+  color: var(--dark);
+  border: 1.5px solid rgba(28, 28, 30, 0.15);
+  border-radius: 100px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 400;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.btn-secondary:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+  transform: translateY(-2px);
+}
+.btn-secondary svg { width: 18px; height: 18px; }
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  background: var(--gold-dim);
+  border-radius: 100px;
+  font-size: 12px;
+  color: var(--gold);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  margin-bottom: 32px;
+  opacity: 0;
+  animation: fade-up 1s 0s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.hero-badge .dot {
+  width: 6px;
+  height: 6px;
+  background: var(--gold);
+  border-radius: 50%;
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Scroll indicator */
+.scroll-hint {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  opacity: 0;
+  animation: fade-up 1s 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.scroll-hint span {
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.scroll-line {
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(to bottom, var(--gold), transparent);
+  animation: scroll-pulse 2s ease-in-out infinite;
+}
+@keyframes scroll-pulse {
+  0%, 100% { opacity: 1; transform: scaleY(1); }
+  50% { opacity: 0.3; transform: scaleY(0.6); }
+}
+
+/* ══════════════════════════════════════
+   DEMO SECTION
+   ══════════════════════════════════════ */
+.demo {
+  position: relative;
+  padding: 80px 32px 120px;
+}
+
+.demo-wrapper {
+  max-width: 900px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.demo-frame {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.04),
+    0 12px 40px rgba(0,0,0,0.08),
+    0 40px 80px rgba(0,0,0,0.06);
+  border: 1px solid rgba(0,0,0,0.06);
+  background: var(--dark);
+}
+
+.demo-frame img,
+.demo-frame video {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.demo-caption {
+  text-align: center;
+  margin-top: 32px;
+  font-size: 15px;
+  color: var(--text-muted);
+  font-style: italic;
+  font-family: var(--font-display);
+  font-size: 18px;
+}
+
+/* Decorative corner accents around demo */
+.demo-accent {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  border: 1px solid var(--gold);
+  opacity: 0.2;
+}
+.demo-accent.tl { top: -20px; left: -20px; border-right: none; border-bottom: none; }
+.demo-accent.br { bottom: -20px; right: -20px; border-left: none; border-top: none; }
+
+/* ══════════════════════════════════════
+   FEATURES SECTION
+   ══════════════════════════════════════ */
+.features {
+  padding: 100px 32px 120px;
+  position: relative;
+}
+
+.features-header {
+  text-align: center;
+  margin-bottom: 72px;
+}
+.features-header .section-desc {
+  margin: 0 auto;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.feature-card {
+  padding: 40px 32px;
+  background: var(--cream-light);
+  border: 1px solid rgba(196, 162, 101, 0.08);
+  border-radius: var(--radius);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(196, 162, 101, 0.1);
+  border-color: rgba(196, 162, 101, 0.15);
+}
+.feature-card:hover::before {
+  opacity: 1;
+}
+
+.feature-icon {
+  width: 48px;
+  height: 48px;
+  background: var(--gold-dim);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  color: var(--gold);
+  font-size: 22px;
+}
+
+.feature-card h3 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.feature-card p {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+@media (max-width: 900px) {
+  .features-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .features-grid { grid-template-columns: 1fr; }
+}
+
+/* ══════════════════════════════════════
+   READING MODES
+   ══════════════════════════════════════ */
+.modes {
+  padding: 100px 32px 120px;
+  background: var(--dark);
+  color: var(--cream);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle pattern overlay */
+.modes::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle at 1px 1px, rgba(196,162,101,0.04) 1px, transparent 0);
+  background-size: 32px 32px;
+  pointer-events: none;
+}
+
+.modes .section-title { color: var(--cream); }
+.modes .section-desc { color: rgba(245,240,232,0.5); }
+
+.modes-header {
+  text-align: center;
+  margin-bottom: 72px;
+  position: relative;
+  z-index: 1;
+}
+.modes-header .section-desc { margin: 0 auto; }
+
+.modes-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.mode-card {
+  padding: 40px 32px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: var(--radius);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+.mode-card:hover {
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(196,162,101,0.2);
+  transform: translateY(-4px);
+}
+
+.mode-number {
+  font-family: var(--font-display);
+  font-size: 64px;
+  font-weight: 300;
+  color: var(--gold);
+  opacity: 0.3;
+  line-height: 1;
+  margin-bottom: 20px;
+}
+
+.mode-card h3 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 400;
+  margin-bottom: 12px;
+  color: var(--cream);
+}
+
+.mode-card p {
+  font-size: 14px;
+  color: rgba(245,240,232,0.5);
+  line-height: 1.7;
+}
+
+.mode-tag {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 4px 14px;
+  border-radius: 100px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border: 1px solid rgba(196,162,101,0.25);
+  color: var(--gold);
+}
+
+@media (max-width: 900px) {
+  .modes-grid { grid-template-columns: 1fr; max-width: 500px; }
+}
+
+/* ══════════════════════════════════════
+   CUSTOMIZATION
+   ══════════════════════════════════════ */
+.customize {
+  padding: 120px 32px;
+  position: relative;
+}
+
+.customize-header {
+  text-align: center;
+  margin-bottom: 72px;
+}
+.customize-header .section-desc { margin: 0 auto; }
+
+.customize-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.customize-card {
+  padding: 48px 40px;
+  background: var(--cream-light);
+  border: 1px solid rgba(196,162,101,0.08);
+  border-radius: var(--radius-lg);
+  transition: all 0.4s;
+}
+.customize-card:hover {
+  border-color: rgba(196,162,101,0.15);
+}
+
+.customize-card h3 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+.customize-card p {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.7;
+  margin-bottom: 24px;
+}
+
+/* Font samples */
+.font-samples {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.font-sample {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: rgba(196,162,101,0.06);
+  border-radius: 12px;
+}
+.font-sample-name {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.font-sample-arabic {
+  font-family: var(--font-arabic);
+  font-size: 22px;
+  color: var(--dark);
+  direction: rtl;
+}
+
+/* Color swatches */
+.color-swatches {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.swatch {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 2px solid rgba(0,0,0,0.06);
+  transition: transform 0.3s;
+  cursor: default;
+}
+.swatch:hover {
+  transform: scale(1.15);
+}
+
+/* Display modes */
+.display-modes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.display-mode-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(196,162,101,0.06);
+  border-radius: 12px;
+  font-size: 14px;
+  color: var(--text-body);
+}
+.display-mode-item svg {
+  width: 20px;
+  height: 20px;
+  color: var(--gold);
+  flex-shrink: 0;
+}
+
+.customize-card.full-width {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 700px) {
+  .customize-grid { grid-template-columns: 1fr; }
+  .customize-card.full-width { grid-column: auto; }
+}
+
+/* ══════════════════════════════════════
+   PRIVACY BANNER
+   ══════════════════════════════════════ */
+.privacy {
+  padding: 80px 32px;
+}
+
+.privacy-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: center;
+  padding: 64px 48px;
+  background: linear-gradient(135deg, var(--gold-dim), rgba(196,162,101,0.05));
+  border: 1px solid rgba(196,162,101,0.12);
+  border-radius: var(--radius-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.privacy-inner::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, var(--gold-dim), transparent 70%);
+  pointer-events: none;
+}
+
+.privacy-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 24px;
+  background: var(--cream);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  position: relative;
+  z-index: 1;
+}
+
+.privacy h2 {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 400;
+  margin-bottom: 16px;
+  position: relative;
+  z-index: 1;
+}
+
+.privacy p {
+  font-size: 16px;
+  color: var(--text-muted);
+  max-width: 500px;
+  margin: 0 auto;
+  line-height: 1.7;
+  position: relative;
+  z-index: 1;
+}
+
+/* ══════════════════════════════════════
+   INSTALL SECTION
+   ══════════════════════════════════════ */
+.install {
+  padding: 100px 32px 120px;
+  background: var(--dark);
+  color: var(--cream);
+  position: relative;
+  overflow: hidden;
+}
+
+.install::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(196,162,101,0.08), transparent 70%);
+  pointer-events: none;
+}
+
+.install-inner {
+  max-width: 700px;
+  margin: 0 auto;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.install .section-title { color: var(--cream); }
+.install .section-desc { margin: 0 auto 48px; color: rgba(245,240,232,0.5); }
+
+.install-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.install-method {
+  padding: 32px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: var(--radius);
+  text-align: left;
+}
+
+.install-method-label {
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 16px;
+  font-weight: 500;
+}
+
+.code-block {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(0,0,0,0.3);
+  padding: 16px 20px;
+  border-radius: 12px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 14px;
+  color: var(--gold-light);
+  gap: 16px;
+}
+
+.code-block code {
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.copy-btn {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--cream);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  font-family: var(--font-body);
+}
+.copy-btn:hover {
+  background: rgba(255,255,255,0.14);
+}
+.copy-btn.copied {
+  background: rgba(196,162,101,0.2);
+  color: var(--gold-light);
+}
+
+.install-or {
+  font-size: 13px;
+  color: rgba(245,240,232,0.3);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.install-method p {
+  font-size: 14px;
+  color: rgba(245,240,232,0.5);
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+
+.install-method a.download-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--gold-light);
+  text-decoration: none;
+  font-size: 15px;
+  transition: color 0.3s;
+}
+.install-method a.download-link:hover {
+  color: var(--gold);
+}
+.install-method a.download-link svg {
+  width: 16px;
+  height: 16px;
+}
+
+.install-note {
+  margin-top: 32px;
+  font-size: 13px;
+  color: rgba(245,240,232,0.3);
+}
+
+/* ══════════════════════════════════════
+   FOOTER
+   ══════════════════════════════════════ */
+footer {
+  padding: 48px 32px;
+  background: var(--dark);
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+
+.footer-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.footer-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: rgba(245,240,232,0.4);
+}
+
+.footer-left a {
+  color: rgba(245,240,232,0.6);
+  text-decoration: none;
+  transition: color 0.3s;
+}
+.footer-left a:hover { color: var(--gold-light); }
+
+.footer-right {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.footer-right a {
+  font-size: 13px;
+  color: rgba(245,240,232,0.4);
+  text-decoration: none;
+  transition: color 0.3s;
+}
+.footer-right a:hover { color: var(--gold-light); }
+
+/* ══════════════════════════════════════
+   BASMALA DIVIDERS
+   ══════════════════════════════════════ */
+.divider {
+  text-align: center;
+  padding: 40px 0;
+  position: relative;
+}
+.divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity: 0.2;
+}
+.divider-star {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--gold);
+  transform: rotate(45deg);
+  opacity: 0.3;
+  position: relative;
+  z-index: 1;
+}
+
+/* ══════════════════════════════════════
+   DARK MODE
+   ══════════════════════════════════════ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --cream: #1A1918;
+    --cream-light: #222120;
+    --cream-dark: #141312;
+    --dark: #F5F0E8;
+    --dark-soft: #E8E0D4;
+    --text-muted: #8A8480;
+    --text-body: #B0AAA4;
+  }
+
+  body { background: #1A1918; color: #F5F0E8; }
+
+  nav.scrolled {
+    background: rgba(26, 25, 24, 0.85);
+    border-bottom-color: rgba(196, 162, 101, 0.08);
+  }
+
+  .feature-card, .customize-card {
+    background: #222120;
+    border-color: rgba(196, 162, 101, 0.06);
+  }
+  .feature-card:hover {
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  }
+
+  .demo-frame {
+    box-shadow:
+      0 2px 8px rgba(0,0,0,0.2),
+      0 12px 40px rgba(0,0,0,0.3);
+    border-color: rgba(255,255,255,0.06);
+  }
+
+  .font-sample, .display-mode-item {
+    background: rgba(196,162,101,0.08);
+  }
+
+  .privacy-inner {
+    background: linear-gradient(135deg, rgba(196,162,101,0.08), rgba(196,162,101,0.03));
+    border-color: rgba(196,162,101,0.08);
+  }
+
+  .privacy-icon { background: #222120; }
+
+  .swatch { border-color: rgba(255,255,255,0.1); }
+
+  /* Keep inverted sections always dark */
+  .modes, .install { background: #111110; color: #F5F0E8; }
+  .modes .section-title, .install .section-title { color: #F5F0E8; }
+  .mode-card h3 { color: #F5F0E8; }
+  .mode-card { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.06); }
+  .mode-card:hover { background: rgba(255,255,255,0.07); }
+  footer { background: #111110; border-top-color: rgba(255,255,255,0.04); }
+}
+
+/* ══════════════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════════════ */
+@media (max-width: 600px) {
+  .hero { padding: 120px 24px 80px; }
+  .hero-title { letter-spacing: -1px; }
+  .hero-buttons { flex-direction: column; align-items: center; }
+  .btn-primary, .btn-secondary { width: 100%; max-width: 280px; justify-content: center; }
+  .scroll-hint { display: none; }
+  .privacy-inner { padding: 40px 24px; }
+  .customize-card { padding: 32px 24px; }
+  .code-block { flex-direction: column; align-items: stretch; gap: 12px; }
+  .copy-btn { text-align: center; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Geometric Background ── -->
+<div class="geo-ornament" aria-hidden="true">
+  <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+    <defs>
+      <pattern id="islamic-grid" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
+        <path d="M50 0 L100 50 L50 100 L0 50Z" fill="none" stroke="currentColor" stroke-width="0.5"/>
+        <circle cx="50" cy="50" r="20" fill="none" stroke="currentColor" stroke-width="0.3"/>
+      </pattern>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#islamic-grid)" />
+  </svg>
+</div>
+
+<!-- ── Navigation ── -->
+<nav>
+  <a href="#" class="nav-brand">
+    <img src="../Wirdi/Wirdi/Assets.xcassets/AppIcon.appiconset/icon_128x128.png" alt="Wirdi" width="32" height="32">
+    <span>Wirdi</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#modes">Reading Modes</a></li>
+    <li><a href="#customize">Customize</a></li>
+    <li><a href="#install" class="nav-cta">Download</a></li>
+  </ul>
+</nav>
+
+<!-- ── Hero ── -->
+<section class="hero">
+  <div class="hero-shapes" aria-hidden="true">
+    <div class="hero-shape"></div>
+    <div class="hero-shape"></div>
+    <div class="hero-shape"></div>
+    <div class="hero-shape"></div>
+  </div>
+
+  <div class="hero-content">
+    <div class="hero-badge">
+      <span class="dot"></span>
+      Open Source &middot; Free Forever
+    </div>
+    <div class="hero-arabic" dir="rtl">وِردي</div>
+    <h1 class="hero-title">Wirdi</h1>
+    <p class="hero-tagline">Your daily Quran companion for Mac.<br>Word-by-word reading in a beautiful overlay.</p>
+    <div class="hero-buttons">
+      <a href="#install" class="btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download for Mac
+      </a>
+      <a href="https://github.com/davut/wirdi" class="btn-secondary" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+        View on GitHub
+      </a>
+    </div>
+  </div>
+
+  <div class="scroll-hint">
+    <span>Scroll</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<!-- ── Demo ── -->
+<section class="demo">
+  <div class="demo-wrapper reveal">
+    <div class="demo-accent tl"></div>
+    <div class="demo-accent br"></div>
+    <div class="demo-frame">
+      <video autoplay loop muted playsinline preload="metadata" aria-label="Wirdi in action — word-by-word Quran reading overlay on macOS">
+        <source src="wirdi-video.mp4" type="video/mp4">
+      </video>
+    </div>
+    <p class="demo-caption">Wirdi reading overlay, seamlessly integrated with your Mac</p>
+  </div>
+</section>
+
+<div class="divider"><span class="divider-star"></span></div>
+
+<!-- ── Features ── -->
+<section class="features" id="features">
+  <div class="features-header reveal">
+    <div class="section-label">Features</div>
+    <h2 class="section-title">Everything you need,<br>nothing you don't</h2>
+    <p class="section-desc">Wirdi is thoughtfully crafted to help you build a consistent Quran reading habit without distraction.</p>
+  </div>
+
+  <div class="features-grid">
+    <div class="feature-card reveal reveal-delay-1">
+      <div class="feature-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      </div>
+      <h3>Word-by-Word</h3>
+      <p>Each ayah is displayed word by word with authentic Quranic script, helping you follow along at your own pace.</p>
+    </div>
+
+    <div class="feature-card reveal reveal-delay-2">
+      <div class="feature-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="7"/><line x1="12" y1="6" x2="12" y2="10"/></svg>
+      </div>
+      <h3>Dynamic Island Overlay</h3>
+      <p>A beautiful notch-shaped overlay sits at the top of your screen — always visible, never in the way.</p>
+    </div>
+
+    <div class="feature-card reveal reveal-delay-3">
+      <div class="feature-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      </div>
+      <h3>Three Reading Modes</h3>
+      <p>Choose between speech-tracked highlighting, auto-scroll, or voice-activated scrolling to match your style.</p>
+    </div>
+
+    <div class="feature-card reveal reveal-delay-1">
+      <div class="feature-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+      <h3>Completely Private</h3>
+      <p>No accounts, no cloud, no analytics. All processing happens on-device. Your reading stays between you and your Mac.</p>
+    </div>
+
+    <div class="feature-card reveal reveal-delay-2">
+      <div class="feature-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <h3>Reading Reminders</h3>
+      <p>Gentle reminders at intervals you choose, with snooze support. Build a daily reading habit that sticks.</p>
+    </div>
+
+    <div class="feature-card reveal reveal-delay-3">
+      <div class="feature-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      </div>
+      <h3>Multi-Display</h3>
+      <p>Follow your cursor across displays or pin the overlay to a specific screen. Works beautifully with any setup.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── Reading Modes ── -->
+<section class="modes" id="modes">
+  <div class="modes-header reveal">
+    <div class="section-label">Reading Modes</div>
+    <h2 class="section-title">Read your way</h2>
+    <p class="section-desc">Three carefully designed modes to accommodate different reading styles and preferences.</p>
+  </div>
+
+  <div class="modes-grid">
+    <div class="mode-card reveal reveal-delay-1">
+      <div class="mode-number">01</div>
+      <h3>Word Tracking</h3>
+      <p>Real-time word-by-word highlighting as you recite aloud. Arabic-aware fuzzy matching follows your voice naturally, even handling pronunciation variations.</p>
+      <span class="mode-tag">Microphone</span>
+    </div>
+
+    <div class="mode-card reveal reveal-delay-2">
+      <div class="mode-number">02</div>
+      <h3>Classic</h3>
+      <p>Smooth auto-scrolling at a constant, adjustable speed. No microphone needed — simply read along as the words flow across the overlay.</p>
+      <span class="mode-tag">No Mic Needed</span>
+    </div>
+
+    <div class="mode-card reveal reveal-delay-3">
+      <div class="mode-number">03</div>
+      <h3>Voice-Activated</h3>
+      <p>The overlay scrolls when you speak and pauses when you're silent. Perfect for reading at your own pace without manual controls.</p>
+      <span class="mode-tag">Microphone</span>
+    </div>
+  </div>
+</section>
+
+<!-- ── Customization ── -->
+<section class="customize" id="customize">
+  <div class="customize-header reveal">
+    <div class="section-label">Customization</div>
+    <h2 class="section-title">Make it yours</h2>
+    <p class="section-desc">Tailor every detail to your preference — fonts, colors, and display modes.</p>
+  </div>
+
+  <div class="customize-grid">
+    <div class="customize-card reveal reveal-delay-1">
+      <h3>Quran Fonts</h3>
+      <p>Three authentic scripts, each rendered beautifully with adjustable size.</p>
+      <div class="font-samples">
+        <div class="font-sample">
+          <span class="font-sample-name">Uthmanic Hafs</span>
+          <span class="font-sample-arabic">بِسْمِ ٱللَّهِ</span>
+        </div>
+        <div class="font-sample">
+          <span class="font-sample-name">Nastaleeq</span>
+          <span class="font-sample-arabic">بِسْمِ ٱللَّهِ</span>
+        </div>
+        <div class="font-sample">
+          <span class="font-sample-name">IndoPak</span>
+          <span class="font-sample-arabic">بِسْمِ ٱللَّهِ</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="customize-card reveal reveal-delay-2">
+      <h3>Highlight Colors</h3>
+      <p>Choose from six highlight colors to mark your current reading position.</p>
+      <div class="color-swatches">
+        <div class="swatch" style="background: #FFFFFF;" title="White"></div>
+        <div class="swatch" style="background: #FFD60A;" title="Yellow"></div>
+        <div class="swatch" style="background: #30D158;" title="Green"></div>
+        <div class="swatch" style="background: #0A84FF;" title="Blue"></div>
+        <div class="swatch" style="background: #FF375F;" title="Pink"></div>
+        <div class="swatch" style="background: #FF9F0A;" title="Orange"></div>
+      </div>
+    </div>
+
+    <div class="customize-card full-width reveal reveal-delay-3">
+      <h3>Display Modes</h3>
+      <p>Two elegant ways to read, designed to complement your workflow.</p>
+      <div class="display-modes">
+        <div class="display-mode-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 3v2h8V3"/></svg>
+          <div>
+            <strong>Dynamic Island Overlay</strong> — A notch-shaped panel pinned to the top of your screen, always on top
+          </div>
+        </div>
+        <div class="display-mode-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 3v6"/></svg>
+          <div>
+            <strong>Floating Window</strong> — A draggable, resizable window with optional glass morphism effect
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Privacy ── -->
+<section class="privacy">
+  <div class="privacy-inner reveal">
+    <div class="privacy-icon">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    </div>
+    <h2>Your reading is private</h2>
+    <p>No accounts. No cloud. No tracking. Everything stays on your Mac — because your relationship with the Quran is yours alone.</p>
+  </div>
+</section>
+
+<!-- ── Install ── -->
+<section class="install" id="install">
+  <div class="install-inner">
+    <div class="section-label reveal">Install</div>
+    <h2 class="section-title reveal reveal-delay-1">Get started in seconds</h2>
+    <p class="section-desc reveal reveal-delay-2">Wirdi is free, open-source, and requires macOS 15 Sequoia or later.</p>
+
+    <div class="install-methods">
+      <div class="install-method reveal reveal-delay-3">
+        <div class="install-method-label">Homebrew (Recommended)</div>
+        <div class="code-block">
+          <code>brew install davut/wirdi/wirdi</code>
+          <button class="copy-btn" onclick="copyCommand(this, 'brew install davut/wirdi/wirdi')">Copy</button>
+        </div>
+      </div>
+
+      <div class="install-or reveal reveal-delay-4">or</div>
+
+      <div class="install-method reveal reveal-delay-5">
+        <div class="install-method-label">Manual Download</div>
+        <p>Download the latest .dmg from GitHub Releases and drag Wirdi to Applications.</p>
+        <a href="https://github.com/davut/wirdi/releases/latest" class="download-link" target="_blank" rel="noopener">
+          Download latest release
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <p class="install-note reveal">Works on Apple Silicon and Intel Macs.</p>
+  </div>
+</section>
+
+<!-- ── Footer ── -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-left">
+      Made by <a href="https://github.com/davut" target="_blank" rel="noopener">Davut Jepbarov</a>
+      <span>&middot;</span>
+      MIT License
+    </div>
+    <div class="footer-right">
+      <a href="https://github.com/davut/wirdi" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/davut/wirdi/issues" target="_blank" rel="noopener">Issues</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ── Scroll Reveal ──
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, {
+  threshold: 0.1,
+  rootMargin: '0px 0px -40px 0px'
+});
+
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// ── Nav scroll state ──
+const nav = document.querySelector('nav');
+let lastScroll = 0;
+
+window.addEventListener('scroll', () => {
+  const scrollY = window.scrollY;
+  nav.classList.toggle('scrolled', scrollY > 60);
+  lastScroll = scrollY;
+}, { passive: true });
+
+// ── Copy command ──
+function copyCommand(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = 'Copy';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+
+// ── Smooth scroll for anchor links ──
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+  anchor.addEventListener('click', function(e) {
+    e.preventDefault();
+    const target = document.querySelector(this.getAttribute('href'));
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+});
+
+// ── Parallax for hero shapes ──
+window.addEventListener('scroll', () => {
+  const scrollY = window.scrollY;
+  const shapes = document.querySelectorAll('.hero-shape');
+  shapes.forEach((shape, i) => {
+    const speed = 0.02 + (i * 0.01);
+    shape.style.transform = `rotate(${45 + scrollY * 0.02}deg) translateY(${scrollY * speed}px)`;
+  });
+}, { passive: true });
+</script>
+
+</body>
+</html>
