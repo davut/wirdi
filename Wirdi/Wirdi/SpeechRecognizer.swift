@@ -81,6 +81,10 @@ class SpeechRecognizer {
         // Clean up any previous session immediately so pending restarts
         // and stale taps are removed before the async auth callback fires.
         cleanupRecognition()
+        // Fresh session: clear dismiss state and force a new engine so we
+        // don't carry stale input-node state across long idle gaps.
+        shouldDismiss = false
+        needsNewAudioEngine = true
 
         let collapsed = text.components(separatedBy: .whitespacesAndNewlines)
             .filter { !$0.isEmpty }
@@ -98,6 +102,7 @@ class SpeechRecognizer {
     func stop() {
         isListening = false
         allowDisplaySleep()
+        needsNewAudioEngine = true
         cleanupRecognition()
     }
 
@@ -106,6 +111,7 @@ class SpeechRecognizer {
         allowDisplaySleep()
         sourceText = ""
         retryCount = maxRetries
+        needsNewAudioEngine = true
         cleanupRecognition()
     }
 
@@ -113,6 +119,7 @@ class SpeechRecognizer {
         retryCount = 0
         matchStartOffset = recognizedCharCount
         shouldDismiss = false
+        needsNewAudioEngine = true
         beginRecognition()
     }
 
@@ -237,6 +244,7 @@ class SpeechRecognizer {
 
         // Guard against invalid format during device transitions (e.g. mic switch)
         guard recordingFormat.sampleRate > 0, recordingFormat.channelCount > 0 else {
+            needsNewAudioEngine = true
             // Retry after a short delay to let the audio system settle
             if retryCount < maxRetries {
                 retryCount += 1
@@ -327,6 +335,7 @@ class SpeechRecognizer {
             isListening = true
             preventDisplaySleep()
         } catch {
+            needsNewAudioEngine = true
             // Transient failure after a device switch — retry
             if retryCount < maxRetries {
                 retryCount += 1
